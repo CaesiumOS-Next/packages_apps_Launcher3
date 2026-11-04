@@ -98,6 +98,12 @@ public class Hotseat extends CellLayout implements Insettable {
     private final MultiPropertyFactory mIconsTranslationXFactory;
 
     private final View mQsb;
+    private final Rect mInsets = new Rect();
+    private final LauncherPrefChangeListener mPrefListener = key -> {
+        if (LauncherPrefs.KEY_SHOW_SEARCH_BAR.equals(key)) {
+            setInsets(mInsets);
+        }
+    };
 
     public Hotseat(Context context) {
         this(context, null);
@@ -265,20 +271,43 @@ public class Hotseat extends CellLayout implements Insettable {
     }
 
     @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        LauncherPrefs.get(getContext()).addListener(mPrefListener, LauncherPrefs.SHOW_SEARCH_BAR);
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        LauncherPrefs.get(getContext()).removeListener(mPrefListener, LauncherPrefs.SHOW_SEARCH_BAR);
+    }
+
+    @Override
     public void setInsets(Rect insets) {
+        if (insets != null) {
+            mInsets.set(insets);
+        }
         FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) getLayoutParams();
         DeviceProfile grid = mActivity.getDeviceProfile();
 
+        boolean showQsb = LauncherPrefs.get(getContext()).get(LauncherPrefs.SHOW_SEARCH_BAR);
+
         int topOverlap = 0;
-        if (grid.isVerticalBarLayout()) {
+        if (grid.isVerticalBarLayout() || !showQsb) {
             mQsb.setVisibility(View.GONE);
-            lp.height = ViewGroup.LayoutParams.MATCH_PARENT;
-            if (grid.isSeascape()) {
-                lp.gravity = Gravity.LEFT;
-                lp.width = grid.getHotseatProfile().getBarSizePx() + insets.left;
+            if (grid.isVerticalBarLayout()) {
+                lp.height = ViewGroup.LayoutParams.MATCH_PARENT;
+                if (grid.isSeascape()) {
+                    lp.gravity = Gravity.LEFT;
+                    lp.width = grid.getHotseatProfile().getBarSizePx() + insets.left;
+                } else {
+                    lp.gravity = Gravity.RIGHT;
+                    lp.width = grid.getHotseatProfile().getBarSizePx() + insets.right;
+                }
             } else {
-                lp.gravity = Gravity.RIGHT;
-                lp.width = grid.getHotseatProfile().getBarSizePx() + insets.right;
+                lp.gravity = Gravity.BOTTOM;
+                lp.width = ViewGroup.LayoutParams.MATCH_PARENT;
+                lp.height = grid.getHotseatProfile().getBarSizePx();
             }
         } else {
             mQsb.setVisibility(View.VISIBLE);
@@ -337,32 +366,36 @@ public class Hotseat extends CellLayout implements Insettable {
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
 
-        DeviceProfile dp = mActivity.getDeviceProfile();
-        mQsb.measure(
-                makeMeasureSpec(dp.getHotseatProfile().getQsbWidth(), MeasureSpec.EXACTLY),
-                makeMeasureSpec(dp.getHotseatProfile().getQsbHeight(), MeasureSpec.EXACTLY)
-        );
+        if (mQsb.getVisibility() != GONE) {
+            DeviceProfile dp = mActivity.getDeviceProfile();
+            mQsb.measure(
+                    makeMeasureSpec(dp.getHotseatProfile().getQsbWidth(), MeasureSpec.EXACTLY),
+                    makeMeasureSpec(dp.getHotseatProfile().getQsbHeight(), MeasureSpec.EXACTLY)
+            );
+        }
     }
 
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
         super.onLayout(changed, l, t, r, b);
 
-        int qsbMeasuredWidth = mQsb.getMeasuredWidth();
-        int left;
-        DeviceProfile dp = mActivity.getDeviceProfile();
-        if (dp.getHotseatProfile().isQsbInline()) {
-            int qsbSpace = dp.getHotseatProfile().getBorderSpace();
-            left = Utilities.isRtl(getResources()) ? r - getPaddingRight() + qsbSpace
-                    : l + getPaddingLeft() - qsbMeasuredWidth - qsbSpace;
-        } else {
-            left = (r - l - qsbMeasuredWidth) / 2;
-        }
-        int right = left + qsbMeasuredWidth;
+        if (mQsb.getVisibility() != GONE) {
+            int qsbMeasuredWidth = mQsb.getMeasuredWidth();
+            int left;
+            DeviceProfile dp = mActivity.getDeviceProfile();
+            if (dp.getHotseatProfile().isQsbInline()) {
+                int qsbSpace = dp.getHotseatProfile().getBorderSpace();
+                left = Utilities.isRtl(getResources()) ? r - getPaddingRight() + qsbSpace
+                        : l + getPaddingLeft() - qsbMeasuredWidth - qsbSpace;
+            } else {
+                left = (r - l - qsbMeasuredWidth) / 2;
+            }
+            int right = left + qsbMeasuredWidth;
 
-        int bottom = b - t - dp.getQsbOffsetY();
-        int top = bottom - dp.getHotseatProfile().getQsbHeight();
-        mQsb.layout(left, top, right, bottom);
+            int bottom = b - t - dp.getQsbOffsetY();
+            int top = bottom - dp.getHotseatProfile().getQsbHeight();
+            mQsb.layout(left, top, right, bottom);
+        }
     }
 
     /**

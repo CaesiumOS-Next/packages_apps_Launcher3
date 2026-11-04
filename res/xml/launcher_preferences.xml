@@ -37,4 +37,11 @@
         launcher:logIdOn="613"
         launcher:logIdOff="614" />
 
+    <SwitchPreferenceCompat
+        android:key="pref_show_search_bar"
+        android:title="@string/pref_show_search_bar_title"
+        android:summary="@string/pref_show_search_bar_summary"
+        android:defaultValue="true"
+        android:persistent="true" />
+
 </androidx.preference.PreferenceScreen>

@@ -254,6 +254,10 @@ constructor(@ApplicationContext private val encryptedContext: Context) {
         const val TASKBAR_PINNING_DESKTOP_MODE_KEY = "TASKBAR_PINNING_DESKTOP_MODE_KEY"
 
         const val ENABLE_TWO_LINE_TOGGLE_KEY: String = "pref_enable_two_line_toggle"
+        const val KEY_SHOW_SEARCH_BAR: String = "pref_show_search_bar"
+
+        @JvmField
+        val SHOW_SEARCH_BAR = backedUpItem(KEY_SHOW_SEARCH_BAR, true)
 
         @JvmField
         val ENABLE_TWOLINE_ALLAPPS_TOGGLE =
