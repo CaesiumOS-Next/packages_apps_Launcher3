@@ -217,6 +217,17 @@
          or the widget picker. -->
     <bool name="reduce_workspace_blur_usage">false</bool>
 
+    <!-- Whether apps in the all apps drawer can be grouped into folders by dropping one app on
+         another. When false, dragging from all apps always goes straight to the home screen. -->
+    <bool name="config_enableAllAppsFolders">true</bool>
+
+    <!-- While an app is dragged inside the all apps drawer, moving it into this top fraction of the
+         display hands the drag over to the home screen so it can be placed there. -->
+    <fraction name="all_apps_drag_to_home_zone">30%</fraction>
+
+    <!-- Fast scroller label for the section holding the all apps folders. -->
+    <string name="all_apps_folders_section_name" translatable="false">★</string>
+
     <!-- Home organizer -->
     <dimen name="home_organizer_background_blur_radius">30dp</dimen>
 

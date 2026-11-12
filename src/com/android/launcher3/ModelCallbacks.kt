@@ -26,6 +26,7 @@ import com.android.launcher3.model.ItemInstallQueue.FLAG_LOADER_RUNNING
 import com.android.launcher3.model.ModelUtils.currentScreenContentFilter
 import com.android.launcher3.model.StringCache
 import com.android.launcher3.model.data.AppInfo
+import com.android.launcher3.model.data.FolderInfo
 import com.android.launcher3.model.data.ItemInfo
 import com.android.launcher3.model.data.PredictedContainerInfo
 import com.android.launcher3.model.data.WorkspaceChangeEvent.AddEvent
@@ -301,6 +302,7 @@ class ModelCallbacks(private var launcher: Launcher) : BgDataModel.Callbacks {
      */
     private fun bindWorkspaceItemsRemoved(matcher: Predicate<ItemInfo?>) {
         launcher.workspace.removeItemsByMatcher(matcher, true)
+        launcher.drawerFolderController.onItemsRemoved(matcher)
         launcher.dragController.onAppsRemoved(matcher)
         PopupContainer.dismissInvalidPopup(launcher)
         hybridHotseatOrganizer?.onModelItemsRemoved(matcher)
@@ -477,6 +479,7 @@ class ModelCallbacks(private var launcher: Launcher) : BgDataModel.Callbacks {
             bindModelWithAsyncInflation(itemIdMap, isBindingSync, "bindCompleteModelAsync")
             return
         }
+        bindDrawerFolders(itemIdMap)
         val taskTracker = CancellationSignal()
         activeBindTask.getAndSet(taskTracker).cancel()
         val inflater = launcher.itemInflater
@@ -589,6 +592,20 @@ class ModelCallbacks(private var launcher: Launcher) : BgDataModel.Callbacks {
             executor,
         )
 
+    /**
+     * Hands the folders that live in the app drawer to the drawer. These items are not bound to the
+     * workspace, they are only shown by the all apps list.
+     */
+    private fun bindDrawerFolders(itemIdMap: WorkspaceData) {
+        val folders =
+            itemIdMap.filterIsInstance<FolderInfo>().filter {
+                it.container == LauncherSettings.Favorites.CONTAINER_ALL_APPS
+            }
+        MAIN_EXECUTOR.execute {
+            if (!launcher.isDestroyed) launcher.drawerFolderController.syncFromModel(folders)
+        }
+    }
+
     /** Binds the model while inflating items asynchronously */
     private fun bindModelWithAsyncInflation(
         itemIdMap: WorkspaceData,
@@ -606,6 +623,7 @@ class ModelCallbacks(private var launcher: Launcher) : BgDataModel.Callbacks {
 
         val tracer = TraceHelper.INSTANCE.beginAsyncSection("launcher-bind-$reason")
 
+        bindDrawerFolders(itemIdMap)
         val orderedScreenIds = itemIdMap.collectWorkspaceScreens()
         val currentScreenIds = getPagesToBindSynchronously(orderedScreenIds)
 

@@ -25,6 +25,7 @@ import androidx.annotation.Nullable;
 import com.android.launcher3.CellLayout;
 import com.android.launcher3.DragSource;
 import com.android.launcher3.Launcher;
+import com.android.launcher3.allapps.DrawerFolderController;
 import com.android.launcher3.dragndrop.DragOptions;
 import com.android.launcher3.logging.StatsLogManager.StatsLogger;
 import com.android.launcher3.model.data.FolderInfo;
@@ -63,6 +64,11 @@ public class LauncherDelegate {
     }
 
     boolean replaceFolderWithFinalItem(Folder folder) {
+        if (DrawerFolderController.isDrawerFolder(folder.mInfo)) {
+            // App drawer folder: the remaining app simply returns to the top level of the drawer.
+            mLauncher.getDrawerFolderController().dissolveFolder(folder);
+            return true;
+        }
         // Add the last remaining child to the workspace in place of the folder
         Runnable onCompleteRunnable = new Runnable() {
             @Override

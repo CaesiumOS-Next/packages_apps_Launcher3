@@ -40,7 +40,9 @@ import com.android.launcher3.Flags;
 import com.android.launcher3.R;
 import com.android.launcher3.allapps.BaseAllAppsAdapter.AdapterItem;
 import com.android.launcher3.model.data.AppInfo;
+import com.android.launcher3.model.data.FolderInfo;
 import com.android.launcher3.model.data.ItemInfo;
+import com.android.launcher3.util.ComponentKey;
 import com.android.launcher3.util.LabelComparator;
 import com.android.launcher3.views.ActivityContext;
 
@@ -50,6 +52,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -114,6 +117,8 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
     private int mNumAppsPerRowAllApps;
     private int mNumAppRowsInAdapter;
     private Predicate<ItemInfo> mItemFilter;
+    @Nullable
+    private DrawerFoldersProvider mDrawerFolders;
 
     public AlphabeticalAppsList(ActivityContext activityContext, @Nullable AllAppsStore appsStore,
             WorkProfileManager workProfileManager, PrivateProfileManager privateProfileManager) {
@@ -256,6 +261,13 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
                         .filter(mPrivateProviderManager.getItemInfoMatcher());
             }
         }
+        if (!hasSearchResults() && mDrawerFolders != null) {
+            // Apps inside a drawer folder are only reachable through the folder.
+            Set<ComponentKey> folderMembers = mDrawerFolders.getFolderMemberKeys();
+            if (!folderMembers.isEmpty()) {
+                appSteam = appSteam.filter(info -> !folderMembers.contains(info.getComponentKey()));
+            }
+        }
         appSteam = appSteam.sorted(mAppNameComparator);
         privateAppStream = privateAppStream.sorted(mAppNameComparator);
 
@@ -314,6 +326,7 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
                                     R.string.work_profile_edu_section), 0));
                     Log.d(TAG, "Adding FastScrollSection for work edu card.");
                 }
+                position = addDrawerFolders(position);
                 position = addAppsWithSections(mApps, position);
             }
             if (Flags.enablePrivateSpace()) {
@@ -362,6 +375,35 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
             DiffUtil.calculateDiff(new MyDiffCallback(oldItems, mAdapterItems), false)
                     .dispatchUpdatesTo(mAdapter);
         }
+    }
+
+    /** Sets (or clears) the source of the folders shown in this list. */
+    public void setDrawerFoldersProvider(@Nullable DrawerFoldersProvider provider) {
+        mDrawerFolders = provider;
+    }
+
+    @Nullable
+    public DrawerFoldersProvider getDrawerFoldersProvider() {
+        return mDrawerFolders;
+    }
+
+    /** Adds the drawer folders in front of the apps, as their own fast scroller section. */
+    private int addDrawerFolders(int position) {
+        if (mDrawerFolders == null) {
+            return position;
+        }
+        List<FolderInfo> folders = mDrawerFolders.getDrawerFolders();
+        if (folders.isEmpty()) {
+            return position;
+        }
+        mFastScrollerSections.add(new FastScrollSectionInfo(
+                mActivityContext.asContext().getString(R.string.all_apps_folders_section_name),
+                position));
+        for (FolderInfo folder : folders) {
+            mAdapterItems.add(AdapterItem.asFolder(folder));
+            position++;
+        }
+        return position;
     }
 
     int addPrivateSpaceItems(int position) {

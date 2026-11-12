@@ -766,6 +766,11 @@ public class DragController implements DragDriver.EventListener, TouchController
         return mMotionDown;
     }
 
+    /** Returns the latest drag position, in DragLayer coordinates. */
+    public Point getLastTouch() {
+        return mLastTouch;
+    }
+
     /**
      * Returns true if the current drag operation is controlled by a mouse.
      */

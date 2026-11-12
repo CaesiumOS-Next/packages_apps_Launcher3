@@ -158,6 +158,7 @@ import com.android.launcher3.accessibility.LauncherAccessibilityDelegate;
 import com.android.launcher3.allapps.ActivityAllAppsContainerView;
 import com.android.launcher3.allapps.AllAppsTransitionController;
 import com.android.launcher3.allapps.DiscoveryBounce;
+import com.android.launcher3.allapps.DrawerFolderController;
 import com.android.launcher3.anim.AnimationSuccessListener;
 import com.android.launcher3.anim.PropertyListBuilder;
 import com.android.launcher3.apppairs.AppPairIcon;
@@ -372,6 +373,7 @@ public class Launcher extends StatefulActivity<LauncherState>
 
     protected LauncherOverlayManager mOverlayManager;
     protected LauncherDragController mDragController;
+    private DrawerFolderController mDrawerFolderController;
 
     protected long mLastTouchUpTime = -1;
     private boolean mTouchInProgress;
@@ -1195,6 +1197,14 @@ public class Launcher extends StatefulActivity<LauncherState>
         mAppsView = findViewById(R.id.apps_view);
         mAppsView.setAllAppsTransitionController(mAllAppsController);
 
+        // Drawer folders. Registered before the drop target bar so the bar has higher priority.
+        mDrawerFolderController = new DrawerFolderController(this);
+        mDragController.addDropTarget(mDrawerFolderController);
+        mDragController.addDragListener(mDrawerFolderController);
+        if (mDrawerFolderController.isEnabled()) {
+            mAppsView.setDrawerFoldersProvider(mDrawerFolderController);
+        }
+
         // Setup Scrim
         mScrimView = findViewById(R.id.scrim_view);
 
@@ -1600,6 +1610,10 @@ public class Launcher extends StatefulActivity<LauncherState>
 
     public LauncherAccessibilityDelegate getAccessibilityDelegate() {
         return mAccessibilityDelegate;
+    }
+
+    public DrawerFolderController getDrawerFolderController() {
+        return mDrawerFolderController;
     }
 
     public LauncherDragController getDragController() {

@@ -565,6 +565,29 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
             enforceDragParity("onDragStart", 0, 0);
         }
 
+        if (mLauncher.getDrawerFolderController().beginDrag(dragObject, options)) {
+            // The drag started in the app drawer and stays there (so it can create or fill drawer
+            // folders) until it enters the home zone, see onDrawerDragHandedOver().
+            mDrawerDragPending = true;
+            return;
+        }
+        mDrawerDragPending = false;
+        startWorkspaceDrag(dragObject, options);
+    }
+
+    /**
+     * Called when a drag that started in the app drawer is moved into the home zone. From here on
+     * it behaves like any other drag onto the workspace.
+     */
+    public void onDrawerDragHandedOver(DragObject dragObject, DragOptions options) {
+        if (!mDrawerDragPending) {
+            return;
+        }
+        mDrawerDragPending = false;
+        startWorkspaceDrag(dragObject, options);
+    }
+
+    private void startWorkspaceDrag(DragObject dragObject, DragOptions options) {
         if (mDragInfo != null && mDragInfo.cell != null) {
             CellLayout layout = (CellLayout) (mDragInfo.cell instanceof LauncherAppWidgetHostView
                     ? dragObject.dragView.getContentViewParent().getParent()
@@ -619,6 +642,9 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
         return !FOLDABLE_SINGLE_PAGE.get() && mLauncher.mDeviceProfile.getDeviceProperties().isTwoPanels();
     }
 
+    /** True while a drag that began in the app drawer has not yet been handed to the workspace. */
+    private boolean mDrawerDragPending = false;
+
     public void deferRemoveExtraEmptyScreen() {
         mDeferRemoveExtraEmptyScreen = true;
     }
@@ -630,6 +656,13 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
         }
 
         updateChildrenLayersEnabled();
+        if (mDrawerDragPending) {
+            // The drag never reached the workspace: nothing was added and the state never changed.
+            mDrawerDragPending = false;
+            mDragInfo = null;
+            mDragSourceInternal = null;
+            return;
+        }
         StateManager<LauncherState, Launcher> stateManager = mLauncher.getStateManager();
         stateManager.addStateListener(new StateManager.StateListener<LauncherState>() {
             @Override

@@ -134,6 +134,10 @@ public class LauncherDragController extends DragController {
 
     @Override
     protected void exitDrag() {
+        if (mLauncher.getDrawerFolderController().isDragInDrawer()) {
+            // The drag never left the app drawer, so the drawer stays open.
+            return;
+        }
         if (!mIsInPreDrag && !mLauncher.isInState(EDIT_MODE)) {
             mLauncher.getStateManager().goToState(NORMAL, SPRING_LOADED_EXIT_DELAY);
         }

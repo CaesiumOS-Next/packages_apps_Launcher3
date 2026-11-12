@@ -951,6 +951,30 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         return true;
     }
 
+    private DrawerFoldersProvider mDrawerFolders;
+
+    /** Enables folders in the personal app list. Only the Launcher drawer does this. */
+    public void setDrawerFoldersProvider(DrawerFoldersProvider provider) {
+        mDrawerFolders = provider;
+        AdapterHolder main = mAH.get(AdapterHolder.MAIN);
+        if (main != null) {
+            main.mAppsList.setDrawerFoldersProvider(provider);
+        }
+    }
+
+    /** Rebuilds the personal app list after drawer folders were added, changed or removed. */
+    public void onDrawerFoldersChanged() {
+        AdapterHolder main = mAH.get(AdapterHolder.MAIN);
+        if (main != null && mDrawerFolders != null) {
+            main.mAppsList.onAppsUpdated();
+        }
+    }
+
+    /** Whether apps shown by the active list can be dragged into drawer folders. */
+    public boolean supportsDrawerFolders() {
+        return mDrawerFolders != null && !isSearching() && isPersonalTab();
+    }
+
     /**
      * Inflates the search bar
      */
