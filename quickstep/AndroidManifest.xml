@@ -19,8 +19,8 @@
 -->
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-     xmlns:tools="http://schemas.android.com/tools"
-     package="com.android.launcher3">
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.android.launcher3">
 
     <uses-permission android:name="android.permission.BROADCAST_CLOSE_SYSTEM_DIALOGS" />
     <uses-permission android:name="android.permission.CONTROL_REMOTE_APP_TRANSITION_ANIMATIONS"/>
@@ -45,7 +45,7 @@
     <uses-permission android:name="android.permission.ACCESS_CONTEXTUAL_SEARCH" />
 
     <uses-permission android:name="android.permission.REPORT_UI_LATENCY_STATS"
-                     android:featureFlag="com.android.server.ui_latency_stats.ui_latency_stats_service" />
+        android:featureFlag="com.android.server.ui_latency_stats.ui_latency_stats_service" />
     <uses-permission android:name="android.permission.SYSTEM_APPLICATION_OVERLAY" />
     <uses-permission android:name="android.permission.EXECUTE_APP_FUNCTIONS_SYSTEM"/>
 
@@ -76,22 +76,29 @@
         android:name="com.android.documentsui.LAUNCH_FILE_MANAGER"
         android:featureFlag="com.android.launcher3.show_files_on_home_screen" />
 
+    <!--
+        Required by HomeScreenFilesUtils.isFeatureEnabled (Environment.isExternalStorageManager()).
+        Without it the launcher binds HomeScreenFilesNoOpProvider and no files are shown.
+        This is signature|appop|preinstalled, so the launcher must be preinstalled (system/system_ext).
+    -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+
     <application android:backupAgent="com.android.launcher3.LauncherBackupAgent"
-         android:enableOnBackInvokedCallback="true"
-         android:fullBackupOnly="true"
-         android:fullBackupContent="@xml/backupscheme"
-         android:hardwareAccelerated="true"
-         android:icon="@drawable/ic_launcher_home"
-         android:label="@string/derived_app_name"
-         android:theme="@style/AppTheme"
-         android:largeHeap="@bool/config_largeHeap"
-         android:restoreAnyVersion="true"
-         android:supportsRtl="true">
+        android:enableOnBackInvokedCallback="true"
+        android:fullBackupOnly="true"
+        android:fullBackupContent="@xml/backupscheme"
+        android:hardwareAccelerated="true"
+        android:icon="@drawable/ic_launcher_home"
+        android:label="@string/derived_app_name"
+        android:theme="@style/AppTheme"
+        android:largeHeap="@bool/config_largeHeap"
+        android:restoreAnyVersion="true"
+        android:supportsRtl="true">
 
         <service android:name="com.android.quickstep.TouchInteractionService"
-             android:permission="android.permission.STATUS_BAR_SERVICE"
-             android:directBootAware="true"
-             android:exported="true">
+            android:permission="android.permission.STATUS_BAR_SERVICE"
+            android:directBootAware="true"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.QUICKSTEP_SERVICE"/>
             </intent-filter>
@@ -107,25 +114,25 @@
         </service>
 
         <activity android:name="com.android.quickstep.RecentsActivity"
-             android:excludeFromRecents="true"
-             android:launchMode="singleTask"
-             android:clearTaskOnLaunch="true"
-             android:stateNotNeeded="true"
-             android:theme="@style/LauncherTheme"
-             android:screenOrientation="behind"
-             android:configChanges="keyboard|keyboardHidden|mcc|mnc|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
-             android:resizeableActivity="true"
-             android:resumeWhilePausing="true"
-             android:enableOnBackInvokedCallback="false"
-             android:taskAffinity=""/>
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:clearTaskOnLaunch="true"
+            android:stateNotNeeded="true"
+            android:theme="@style/LauncherTheme"
+            android:screenOrientation="behind"
+            android:configChanges="keyboard|keyboardHidden|mcc|mnc|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
+            android:resizeableActivity="true"
+            android:resumeWhilePausing="true"
+            android:enableOnBackInvokedCallback="false"
+            android:taskAffinity=""/>
 
         <!-- Content provider to settings search. The autority should be same as the packageName -->
         <provider android:name="com.android.quickstep.LauncherSearchIndexablesProvider"
-             android:authorities="${applicationId}"
-             android:grantUriPermissions="true"
-             android:multiprocess="true"
-             android:permission="android.permission.READ_SEARCH_INDEXABLES"
-             android:exported="true">
+            android:authorities="${applicationId}"
+            android:grantUriPermissions="true"
+            android:multiprocess="true"
+            android:permission="android.permission.READ_SEARCH_INDEXABLES"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.content.action.SEARCH_INDEXABLES_PROVIDER"/>
             </intent-filter>
@@ -133,11 +140,11 @@
 
         <!-- FileProvider used for sharing images. -->
         <provider android:name="androidx.core.content.FileProvider"
-             android:authorities="${applicationId}.overview.fileprovider"
-             android:exported="false"
-             android:grantUriPermissions="true">
+            android:authorities="${applicationId}.overview.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS"
-                 android:resource="@xml/overview_file_provider_paths"/>
+                android:resource="@xml/overview_file_provider_paths"/>
         </provider>
 
         <activity android:name="com.android.launcher3.proxy.ProxyActivityStarter"
