@@ -303,6 +303,11 @@ public class DrawerFolderController implements DropTarget, DragController.DragLi
     }
 
     @Override
+    public void prepareAccessibilityDrop() {
+        // Accessibility drags are not supported by the drawer drop target.
+    }
+
+    @Override
     public boolean acceptDrop(DragObject d) {
         // Drops that do nothing are rejected so that the drag view simply returns. Items taken out
         // of a drawer folder are always accepted, they move back to the top level of the drawer.
