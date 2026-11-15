@@ -22,11 +22,14 @@ import static com.android.launcher3.LauncherState.ALL_APPS;
 
 import android.graphics.Point;
 import android.graphics.Rect;
+import android.graphics.Typeface;
 import android.util.SparseArray;
+import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
+import com.android.launcher3.BubbleTextView;
 import com.android.launcher3.DropTarget;
 import com.android.launcher3.Launcher;
 import com.android.launcher3.R;
@@ -39,6 +42,7 @@ import com.android.launcher3.model.data.FolderInfo;
 import com.android.launcher3.model.data.ItemInfo;
 import com.android.launcher3.model.data.WorkspaceItemInfo;
 import com.android.launcher3.util.ComponentKey;
+import com.android.launcher3.views.DoubleShadowBubbleTextView;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -187,6 +191,7 @@ public class DrawerFolderController implements DropTarget, DragController.DragLi
                 return;
             }
             icon = (FolderIcon) inflated;
+            applyDrawerLabelStyle(icon);
             mIcons.put(info.id, icon);
         }
         if (icon.getParent() != host) {
@@ -196,6 +201,26 @@ public class DrawerFolderController implements DropTarget, DragController.DragLi
             host.removeAllViews();
             host.addView(icon, new FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT));
         }
+    }
+
+    /**
+     * Drawer folders reuse the workspace {@link FolderIcon}, whose label is styled for text drawn
+     * directly on the wallpaper (white, double shadow, workspace font and size). In the drawer the
+     * label must look exactly like the label of an app icon ({@code BaseIcon.AllApps}), otherwise
+     * folder labels stay white while the app labels adapt to the surface.
+     */
+    private void applyDrawerLabelStyle(FolderIcon icon) {
+        BubbleTextView label = icon.getFolderName();
+        if (label == null) {
+            return;
+        }
+        if (label instanceof DoubleShadowBubbleTextView) {
+            ((DoubleShadowBubbleTextView) label).setShadowsEnabled(false);
+        }
+        label.setTextColor(mLauncher.getColor(R.color.materialColorOnSurface));
+        label.setTextSize(TypedValue.COMPLEX_UNIT_PX,
+                mLauncher.getDeviceProfile().getAllAppsProfile().getIconTextSizePx());
+        label.setTypeface(Typeface.create("variable-title-small", Typeface.NORMAL));
     }
 
     // ---------------------------------------------------------------------------------------
@@ -346,6 +371,7 @@ public class DrawerFolderController implements DropTarget, DragController.DragLi
 
         FrameLayout scratchHost = new FrameLayout(mLauncher);
         FolderIcon icon = (FolderIcon) mLauncher.getItemInflater().inflateItem(info, scratchHost);
+        applyDrawerLabelStyle(icon);
         mIcons.put(info.id, icon);
 
         icon.getFolder().addFolderContent(target.makeWorkspaceItem(mLauncher));

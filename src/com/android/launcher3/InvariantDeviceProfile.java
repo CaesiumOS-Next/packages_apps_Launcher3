@@ -21,6 +21,7 @@ import static com.android.launcher3.LauncherPrefs.ENABLE_TWOLINE_ALLAPPS_TOGGLE;
 import static com.android.launcher3.LauncherPrefs.FIXED_LANDSCAPE_MODE;
 import static com.android.launcher3.LauncherPrefs.GRID_NAME;
 import static com.android.launcher3.LauncherPrefs.NON_FIXED_LANDSCAPE_GRID_NAME;
+import static com.android.launcher3.LauncherPrefs.SHOW_SEARCH_BAR;
 import static com.android.launcher3.LauncherPrefs.WORKSPACE_ITEMS_LABEL_HIDDEN;
 import static com.android.launcher3.Utilities.dpiFromPx;
 import static com.android.launcher3.deviceprofile.parser.DeviceTypedMap.COUNT_SIZES;
@@ -224,6 +225,12 @@ public class InvariantDeviceProfile {
     private String mLocale = "";
     public boolean enableTwoLinesInAllApps = false;
 
+    /**
+     * Whether the home screen search bar (QSB) is shown. When false, the space which is normally
+     * reserved for the QSB below the hotseat is not reserved by the device profile.
+     */
+    public boolean showSearchBar = true;
+
     // If non-negative, the workspace row with which top of the all apps container is to be aligned
     // with.
     public int appListAlignedWithWorkspaceRow = -1;
@@ -300,11 +307,15 @@ public class InvariantDeviceProfile {
             } else if (WORKSPACE_ITEMS_LABEL_HIDDEN.getSharedPrefKey().equals(key)
                     && com.android.systemui.shared.Flags.workspaceItemsLabelHidden()) {
                 onConfigChanged();
+            } else if (SHOW_SEARCH_BAR.getSharedPrefKey().equals(key)
+                    && showSearchBar != prefs.get(SHOW_SEARCH_BAR)) {
+                onConfigChanged();
             }
         };
-        prefs.addListener(prefListener, FIXED_LANDSCAPE_MODE, ENABLE_TWOLINE_ALLAPPS_TOGGLE);
+        prefs.addListener(prefListener, FIXED_LANDSCAPE_MODE, ENABLE_TWOLINE_ALLAPPS_TOGGLE,
+                SHOW_SEARCH_BAR);
         lifeCycle.addCloseable(() -> prefs.removeListener(prefListener,
-                FIXED_LANDSCAPE_MODE, ENABLE_TWOLINE_ALLAPPS_TOGGLE));
+                FIXED_LANDSCAPE_MODE, ENABLE_TWOLINE_ALLAPPS_TOGGLE, SHOW_SEARCH_BAR));
 
         SimpleBroadcastReceiver localeReceiver = new SimpleBroadcastReceiver(context,
                 mMainExecutor, i -> onConfigChanged());
@@ -374,6 +385,7 @@ public class InvariantDeviceProfile {
         enableTwoLinesInAllApps = Flags.enableTwolineToggle()
                 && Utilities.isEnglishLanguage(context)
                 && mPrefs.get(ENABLE_TWOLINE_ALLAPPS_TOGGLE);
+        showSearchBar = mPrefs.get(SHOW_SEARCH_BAR);
         mLocale = context.getResources().getConfiguration().locale.toString();
 
         DisplayMetrics metrics = context.getResources().getDisplayMetrics();

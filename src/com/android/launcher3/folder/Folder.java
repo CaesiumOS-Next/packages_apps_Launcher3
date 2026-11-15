@@ -84,6 +84,7 @@ import com.android.launcher3.DropTarget;
 import com.android.launcher3.ExtendedEditText;
 import com.android.launcher3.Flags;
 import com.android.launcher3.Launcher;
+import com.android.launcher3.LauncherSettings;
 import com.android.launcher3.OnAlarmListener;
 import com.android.launcher3.R;
 import com.android.launcher3.ShortcutAndWidgetContainer;
@@ -1059,7 +1060,10 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
         setState(STATE_CLOSED);
         mContent.setCurrentPage(0);
 
-        if (Flags.enableExpressiveFolderExpansion()) {
+        // Drawer folders never animate the launcher scrim/zoom (see FolderSpringAnimatorSet), so
+        // there is nothing to reset, and resetting would clobber the all apps scrim.
+        if (Flags.enableExpressiveFolderExpansion()
+                && mInfo.container != LauncherSettings.Favorites.CONTAINER_ALL_APPS) {
             FolderAnimationSpringBuilderManager.resetLauncherScale(mLauncherDelegate);
             FolderAnimationSpringBuilderManager.resetScrimAndZoom(mLauncherDelegate);
         }

@@ -198,7 +198,12 @@ data class HotseatProfileInitialValues(
             // qsbVisualHeight is the total height of the QSB view, we leave some space at the top
             // and bottom for shadows, similar to the icon shadows.
             // This (2 * hotseatQsbShadowHeight) is to account for the top space and the bottom.
-            val qsbVisualHeight = hotseatQsbHeight - (2 * hotseatQsbShadowHeight)
+            var qsbVisualHeight = hotseatQsbHeight - (2 * hotseatQsbShadowHeight)
+            if (!inv.showSearchBar) {
+                // The search bar is hidden: don't reserve any space for it below the hotseat.
+                qsbVisualHeight = 0
+                hotseatQsbSpace = 0
+            }
             return HotseatProfileInitialValues(
                 areNavButtonsInline = areNavButtonsInline,
                 navButtonsLayoutWidthPx = navButtonsLayoutWidthPx,
@@ -322,7 +327,12 @@ data class HotseatProfileInitialValues(
 
             val barEdgePaddingPx = hotseatBarEdgePaddingPx
             val barWorkspaceSpacePx = hotseatBarWorkspaceSpacePx
-            val qsbVisualHeight = hotseatQsbHeight - 2 * hotseatQsbShadowHeight
+            var qsbVisualHeight = hotseatQsbHeight - 2 * hotseatQsbShadowHeight
+            if (!inv.showSearchBar) {
+                // The search bar is hidden: don't reserve any space for it below the hotseat.
+                qsbVisualHeight = 0
+                hotseatQsbSpace = 0
+            }
             return HotseatProfileInitialValues(
                 areNavButtonsInline = areNavButtonsInline,
                 navButtonsLayoutWidthPx = navButtonsLayoutWidthPx,

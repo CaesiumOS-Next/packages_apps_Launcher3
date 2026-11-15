@@ -43,6 +43,7 @@ import com.android.launcher3.R;
 public class DoubleShadowBubbleTextView extends BubbleTextView {
 
     private final ShadowInfo mShadowInfo;
+    private boolean mShadowsEnabled = true;
 
     public DoubleShadowBubbleTextView(Context context) {
         this(context, null);
@@ -61,6 +62,24 @@ public class DoubleShadowBubbleTextView extends BubbleTextView {
                 0,
                 mShadowInfo.getAmbientShadowColor()
         );
+    }
+
+    /**
+     * Enables or disables the text shadows. They are meant for text drawn directly over the
+     * wallpaper (workspace), and should be turned off where the label sits on a themed surface.
+     */
+    public void setShadowsEnabled(boolean enabled) {
+        if (mShadowsEnabled == enabled) {
+            return;
+        }
+        mShadowsEnabled = enabled;
+        if (enabled) {
+            setShadowLayer(mShadowInfo.getAmbientShadowBlur(), 0, 0,
+                    mShadowInfo.getAmbientShadowColor());
+        } else {
+            getPaint().clearShadowLayer();
+        }
+        invalidate();
     }
 
     @Override
@@ -109,7 +128,12 @@ public class DoubleShadowBubbleTextView extends BubbleTextView {
 
         super.drawSelectedBackgroundIfNecessary(canvas);
 
-        // If text is transparent or shadow alpha is 0, don't draw any shadow
+        // If shadows are disabled, text is transparent or shadow alpha is 0, don't draw any shadow
+        if (!mShadowsEnabled) {
+            getPaint().clearShadowLayer();
+            super.onDraw(canvas);
+            return;
+        }
         if (skipDoubleShadow()) {
             super.onDraw(canvas);
             return;

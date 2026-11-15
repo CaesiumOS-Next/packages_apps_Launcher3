@@ -34,6 +34,7 @@ import com.android.launcher3.LauncherAnimUtils.HOTSEAT_SCALE_PROPERTY_FACTORY
 import com.android.launcher3.LauncherAnimUtils.SCALE_INDEX_FOLDER_ANIM
 import com.android.launcher3.LauncherAnimUtils.WORKSPACE_SCALE_PROPERTY_FACTORY
 import com.android.launcher3.LauncherAnimUtils.getScaleProperty
+import com.android.launcher3.LauncherSettings.Favorites.CONTAINER_ALL_APPS
 import com.android.launcher3.R
 import com.android.launcher3.Utilities.isDarkTheme
 import com.android.launcher3.anim.SpringAnimationBuilder
@@ -78,14 +79,24 @@ class FolderSpringAnimatorSet(val animatorSet: AnimatorSet) {
             addFolderScaleAndTranslateAnimators(folder, animatorSet, folderAnimData)
             addClipRevealAnimators(folder, animatorSet, clipRevealData)
             addAlphaAndColorAnimators(folder, animatorSet, folderAnimData)
-            addWorkspaceAnimators(
-                folder.context,
-                animatorSet,
-                folderAnimData.isOpening,
-                launcherDelegate,
-            )
-            launcherDelegate.launcher?.depthController?.folderZoom?.let {
-                addWallpaperZoomAnimator(folder.context, animatorSet, folderAnimData.isOpening, it)
+            // Folders in the app drawer must not touch the launcher scrim, workspace/hotseat scale
+            // or wallpaper zoom: while all apps is open the scrim draws the drawer's frosted panel,
+            // so animating it makes the drawer background flash/dim and lose its blur style.
+            if (folder.info.container != CONTAINER_ALL_APPS) {
+                addWorkspaceAnimators(
+                    folder.context,
+                    animatorSet,
+                    folderAnimData.isOpening,
+                    launcherDelegate,
+                )
+                launcherDelegate.launcher?.depthController?.folderZoom?.let {
+                    addWallpaperZoomAnimator(
+                        folder.context,
+                        animatorSet,
+                        folderAnimData.isOpening,
+                        it,
+                    )
+                }
             }
             iconAnimData.forEach { addContentIconAnimators(folder.context, animatorSet, it) }
             return FolderSpringAnimatorSet(animatorSet)
