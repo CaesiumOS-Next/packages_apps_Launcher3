@@ -1004,7 +1004,7 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
 
     private void dispatchDrawLarge(Canvas canvas) {
         if (mBackgroundIsVisible && !mLargePlate.isEmpty()) {
-            float radius = getResources().getDimension(R.dimen.dialogCornerRadius);
+            float radius = getResources().getDimension(R.dimen.large_folder_plate_radius);
             canvas.drawRoundRect(mLargePlateF, radius, radius, mLargePlatePaint);
         }
         super.dispatchDraw(canvas);
