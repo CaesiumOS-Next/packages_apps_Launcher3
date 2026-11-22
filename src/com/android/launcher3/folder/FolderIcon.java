@@ -31,11 +31,14 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.ObjectAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
+import android.content.res.TypedArray;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 import android.util.Property;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -153,6 +156,17 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
 
     private float mScaleForReorderBounce = 1f;
 
+    // Large folder state. A large folder spans NxN cells, shows its first icons directly in a
+    // grid of slots, and uses the regular folder preview for the items that do not fit.
+    private final List<BubbleTextView> mLargeSlotViews = new ArrayList<>();
+    private final Rect mLargePlate = new Rect();
+    private final RectF mLargePlateF = new RectF();
+    private final Paint mLargePlatePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private boolean mLargeLaidOut = false;
+    private int mLargeMeasuredW = -1;
+    private int mLargeMeasuredH = -1;
+    private int mLargeMeasuredSize = -1;
+
     private static final Property<FolderIcon, Float> DOT_SCALE_PROPERTY
             = new Property<FolderIcon, Float>(Float.TYPE, "dotScale") {
         @Override
@@ -263,6 +277,10 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
     }
 
     public void getPreviewBounds(Rect outBounds) {
+        if (isLargeFolder() && !mLargePlate.isEmpty()) {
+            outBounds.set(mLargePlate);
+            return;
+        }
         mPreviewItemManager.recomputePreviewDrawingParams();
         mBackground.getBounds(outBounds);
         // The preview items go outside of the bounds of the background.
@@ -294,7 +312,9 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
         CellLayoutLayoutParams lp = (CellLayoutLayoutParams) getLayoutParams();
         CellLayout cl = (CellLayout) getParent().getParent();
 
-        mBackground.animateToAccept(cl, lp.getCellX(), lp.getCellY());
+        if (!isLargeFolder()) {
+            mBackground.animateToAccept(cl, lp.getCellX(), lp.getCellY());
+        }
         mOpenAlarm.setOnAlarmListener(mOnOpenListener);
         if (SPRING_LOADING_ENABLED &&
                 ((dragInfo instanceof WorkspaceItemFactory)
@@ -512,6 +532,11 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
         for (ItemInfo si : mInfo.getContents()) {
             mDotInfo.addDotInfo(mActivity.getDotInfoForItem(si));
         }
+        for (BubbleTextView slot : mLargeSlotViews) {
+            if (slot != null && slot.getTag() instanceof ItemInfo) {
+                slot.applyDotState((ItemInfo) slot.getTag(), false /* animate */);
+            }
+        }
         boolean isDotted = mDotInfo.hasDot();
         float newDotScale = isDotted ? 1f : 0f;
         // Animate when a dot is first added or when it is removed.
@@ -592,6 +617,11 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
     @Override
     public void setIconVisible(boolean visible) {
         mBackgroundIsVisible = visible;
+        for (BubbleTextView slot : mLargeSlotViews) {
+            if (slot != null) {
+                slot.setVisibility(visible ? VISIBLE : INVISIBLE);
+            }
+        }
         invalidate();
     }
 
@@ -613,6 +643,10 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
         // text.
         if (isSelected()) {
             drawWorkspaceItemSelectionHighlight(canvas, this);
+        }
+        if (isLargeFolder()) {
+            dispatchDrawLarge(canvas);
+            return;
         }
         super.dispatchDraw(canvas);
 
@@ -636,6 +670,19 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
     }
 
     public void drawDot(Canvas canvas) {
+        if (isLargeFolder()) {
+            // Icons in the slots draw their own dots, so only the overflow items need one here.
+            if (mForceHideDot || !mInfo.hasLargeOverflow() || !hasDot()) return;
+            Rect iconBounds = mDotParams.iconBounds;
+            int size = mBackground.previewSize;
+            iconBounds.left = mLargePlate.centerX() - size / 2;
+            iconBounds.right = iconBounds.left + size;
+            iconBounds.top = mLargePlate.top;
+            iconBounds.bottom = iconBounds.top + size;
+            mDotParams.scale = Math.max(0, mDotScale);
+            mDotRenderer.draw(canvas, mDotParams);
+            return;
+        }
         if (!mForceHideDot && ((mDotInfo != null && mDotInfo.hasDot()) || mDotScale > 0)) {
             Rect iconBounds = mDotParams.iconBounds;
             // FolderIcon draws the icon to be top-aligned (with padding) & horizontally-centered
@@ -656,6 +703,15 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        if (isLargeFolder()) {
+            measureLarge(MeasureSpec.getSize(widthMeasureSpec),
+                    MeasureSpec.getSize(heightMeasureSpec));
+            super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+            return;
+        }
+        if (mLargeLaidOut) {
+            leaveLargeLayout();
+        }
         boolean shouldCenterIcon = mActivity.getDeviceProfile().getWorkspaceProfile()
                 .getIconCenterVertically();
         if (shouldCenterIcon) {
@@ -708,9 +764,18 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
      */
     public void updatePreviewItems(Predicate<ItemInfo> itemCheck) {
         mPreviewItemManager.updatePreviewItems(itemCheck);
+        for (BubbleTextView slot : mLargeSlotViews) {
+            if (slot != null && slot.getTag() instanceof WorkspaceItemInfo info
+                    && itemCheck.test(info)) {
+                slot.applyFromWorkspaceItem(info);
+            }
+        }
     }
 
     public void onItemsChanged(boolean animate) {
+        if (isLargeFolder() || mLargeLaidOut) {
+            rebuildLargeSlots();
+        }
         updatePreviewItems(false);
         updateDotInfo();
         setContentDescription(getAccessiblityTitle(mInfo.title));
@@ -789,6 +854,173 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
     @Override
     public void getWorkspaceVisualDragBounds(Rect bounds) {
         getPreviewBounds(bounds);
+    }
+
+    /** Returns true if this folder currently occupies more than one cell. */
+    public boolean isLargeFolder() {
+        return mInfo != null && mInfo.isLargeFolder();
+    }
+
+    /**
+     * Called after {@link FolderInfo#spanX}/{@link FolderInfo#spanY} changed, to switch between
+     * the regular and the large presentation.
+     */
+    public void onLargeSizeChanged() {
+        mLargeMeasuredSize = -1;
+        rebuildLargeSlots();
+        mPreviewVerifier.setFolderInfo(mInfo);
+        mPreviewItemManager.invalidateDrawingParams();
+        updatePreviewItems(false);
+        updateDotInfo();
+        requestLayout();
+        invalidate();
+    }
+
+    /** Creates the slot icons for the first items of a large folder. */
+    private void rebuildLargeSlots() {
+        for (BubbleTextView slot : mLargeSlotViews) {
+            if (slot != null) {
+                removeView(slot);
+            }
+        }
+        mLargeSlotViews.clear();
+        if (!isLargeFolder()) {
+            mBackground.clearAnchor();
+            mPreviewItemManager.invalidateDrawingParams();
+            return;
+        }
+
+        TypedArray ta = getContext().getTheme().obtainStyledAttributes(
+                R.styleable.FolderIconPreview);
+        mLargePlatePaint.setColor(ta.getColor(
+                R.styleable.FolderIconPreview_folderPreviewColor, 0));
+        ta.recycle();
+
+        List<ItemInfo> contents = mInfo.getContents();
+        int visible = Math.min(mInfo.getLargeVisibleCount(), contents.size());
+        LayoutInflater inflater = LayoutInflater.from(getContext());
+        for (int i = 0; i < visible; i++) {
+            ItemInfo item = contents.get(i);
+            if (!(item instanceof WorkspaceItemInfo)) {
+                // Other item types are only reachable by opening the folder.
+                mLargeSlotViews.add(null);
+                continue;
+            }
+            BubbleTextView slot = (BubbleTextView) inflater.inflate(
+                    R.layout.app_icon, null, false);
+            slot.setLayoutParams(new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            slot.applyFromWorkspaceItem((WorkspaceItemInfo) item);
+            slot.setContainerTextVisibility(false);
+            slot.setCenterVertically(true);
+            slot.setOnClickListener(mActivity.getItemOnClickListener());
+            // Long press acts on the whole folder, which keeps the popup and the drag consistent.
+            slot.setOnLongClickListener(v -> performLongClick());
+            slot.setVisibility(mBackgroundIsVisible ? VISIBLE : INVISIBLE);
+            mLargeSlotViews.add(slot);
+            addView(slot);
+        }
+        mLargeMeasuredSize = -1;
+    }
+
+    /** Computes the center of slot {@code index} in this view's coordinates. */
+    private void getLargeSlotCenter(int index, int n, int w, int gridH, int[] out) {
+        int col = index % n;
+        int row = index / n;
+        if (Utilities.isRtl(getResources())) {
+            col = n - 1 - col;
+        }
+        out[0] = Math.round((col + 0.5f) * w / n);
+        out[1] = Math.round((row + 0.5f) * gridH / n);
+    }
+
+    private int getLargeLabelHeight() {
+        Paint.FontMetrics fm = mFolderName.getPaint().getFontMetrics();
+        return (int) Math.ceil(fm.bottom - fm.top)
+                + getResources().getDimensionPixelSize(R.dimen.folder_name_padding_large);
+    }
+
+    private void measureLarge(int w, int h) {
+        if (getPaddingLeft() != 0 || getPaddingTop() != 0
+                || getPaddingRight() != 0 || getPaddingBottom() != 0) {
+            setPadding(0, 0, 0, 0);
+        }
+        int n = mInfo.getLargeFolderSize();
+        if (!mLargeLaidOut || mLargeSlotViews.size() != Math.min(mInfo.getLargeVisibleCount(),
+                mInfo.getContents().size())) {
+            mLargeLaidOut = true;
+            rebuildLargeSlots();
+        }
+        if (w == mLargeMeasuredW && h == mLargeMeasuredH && n == mLargeMeasuredSize) {
+            return;
+        }
+        mLargeMeasuredW = w;
+        mLargeMeasuredH = h;
+        mLargeMeasuredSize = n;
+
+        int labelH = getLargeLabelHeight();
+        int gridH = Math.max(h - labelH, n);
+        int inset = getResources().getDimensionPixelSize(R.dimen.large_folder_plate_inset);
+        mLargePlate.set(inset, inset, Math.max(w - inset, inset), Math.max(gridH - inset, inset));
+        mLargePlateF.set(mLargePlate);
+
+        // The folder name sits under the plate.
+        FrameLayout.LayoutParams nameLp = (FrameLayout.LayoutParams) mFolderName.getLayoutParams();
+        nameLp.gravity = Gravity.TOP;
+        nameLp.topMargin = gridH;
+
+        int slotW = w / n;
+        int slotH = gridH / n;
+        int[] center = new int[2];
+        for (int i = 0; i < mLargeSlotViews.size(); i++) {
+            BubbleTextView slot = mLargeSlotViews.get(i);
+            if (slot == null) continue;
+            getLargeSlotCenter(i, n, w, gridH, center);
+            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) slot.getLayoutParams();
+            lp.width = slotW;
+            lp.height = slotH;
+            lp.gravity = Gravity.TOP | Gravity.START;
+            lp.leftMargin = center[0] - slotW / 2;
+            lp.topMargin = center[1] - slotH / 2;
+        }
+
+        // The overflow preview lives in the last slot.
+        getLargeSlotCenter(n * n - 1, n, w, gridH, center);
+        mBackground.setAnchorCenter(center[0], center[1]);
+        mPreviewItemManager.invalidateDrawingParams();
+    }
+
+    /** Restores the regular single-cell layout after being a large folder. */
+    private void leaveLargeLayout() {
+        mLargeLaidOut = false;
+        mLargeMeasuredW = mLargeMeasuredH = mLargeMeasuredSize = -1;
+        mLargePlate.setEmpty();
+        rebuildLargeSlots();
+        DeviceProfile grid = mActivity.getDeviceProfile();
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) mFolderName.getLayoutParams();
+        lp.topMargin = grid.getWorkspaceProfile().getIconSizePx()
+                + grid.getWorkspaceProfile().getIconDrawablePaddingPx();
+    }
+
+    private void dispatchDrawLarge(Canvas canvas) {
+        if (mBackgroundIsVisible && !mLargePlate.isEmpty()) {
+            float radius = getResources().getDimension(R.dimen.dialogCornerRadius);
+            canvas.drawRoundRect(mLargePlateF, radius, radius, mLargePlatePaint);
+        }
+        super.dispatchDraw(canvas);
+        if (!mBackgroundIsVisible || !mInfo.hasLargeOverflow()) return;
+
+        mPreviewItemManager.recomputePreviewDrawingParams();
+        if (!mBackground.drawingDelegated()) {
+            mBackground.drawBackground(canvas);
+        }
+        if (!mCurrentPreviewItems.isEmpty() || mAnimating) {
+            mPreviewItemManager.draw(canvas);
+        }
+        if (!mBackground.drawingDelegated()) {
+            mBackground.drawBackgroundStroke(canvas);
+        }
+        drawDot(canvas);
     }
 
     /**

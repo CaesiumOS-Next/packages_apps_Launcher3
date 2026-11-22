@@ -62,8 +62,12 @@ data class FolderAnimationData(
             val previewBackground = folderIcon.mBackground
 
             // Get items in Preview and their scaling
-            val itemsInPreview: List<View> = getPreviewIconsOnPage(this, 0)
-            val previewScale: Float = folderIcon.layoutRule.scaleForItem(itemsInPreview.size, 0)
+            // A large folder without overflow has no preview items, so fall back to the first icon
+            // to get a size reference for the animation.
+            val itemsInPreview: List<View> =
+                getPreviewIconsOnPage(this, 0).ifEmpty { iconsInReadingOrder.take(1) }
+            val previewScale: Float =
+                folderIcon.layoutRule.scaleForItem(maxOf(itemsInPreview.size, 1), 0)
             val previewSize: Float = folderIcon.layoutRule.iconSize * previewScale
 
             // Get scale and position of FolderIcon relative to DragLayer

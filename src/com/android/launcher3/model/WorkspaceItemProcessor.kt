@@ -495,6 +495,23 @@ class WorkspaceItemProcessor(
         collection.spanY = 1
         if (collection is FolderInfo) {
             collection.options = c.options
+            // Large (enlarged / XXL) folders are persisted through their span. Keep it only if it
+            // is valid and the region is still free, otherwise fall back to a regular folder so
+            // the folder and its contents are not discarded as overlapping.
+            val largeSize = c.spanX
+            if (
+                c.container == Favorites.CONTAINER_DESKTOP &&
+                    c.spanY == largeSize &&
+                    largeSize > FolderInfo.LARGE_SIZE_REGULAR &&
+                    FolderInfo.isValidLargeSize(largeSize)
+            ) {
+                collection.spanX = largeSize
+                collection.spanY = largeSize
+                if (!c.canPlaceOnDesktop(collection)) {
+                    collection.spanX = 1
+                    collection.spanY = 1
+                }
+            }
         } else {
             // An app pair may be inside another folder, so it needs to preserve rank information.
             collection.rank = c.rank

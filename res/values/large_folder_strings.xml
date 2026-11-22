@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Popup item for resizing a folder on the home screen -->
+    <string name="large_folder_resize_label">Resize</string>
+    <!-- Title of the folder size sheet -->
+    <string name="large_folder_size_title">Folder size</string>
+    <string name="large_folder_size_regular">Regular</string>
+    <string name="large_folder_size_enlarged">Enlarged</string>
+    <string name="large_folder_size_xxl">XXL</string>
+    <string name="large_folder_cancel">Cancel</string>
+    <string name="large_folder_apply">Apply</string>
+    <string name="large_folder_no_space">Not enough space on this home screen page</string>
+</resources>

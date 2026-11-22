@@ -82,6 +82,15 @@ public class FolderInfo extends CollectionInfo {
         }
     }
 
+    /** Size of a regular (1x1) folder. */
+    public static final int LARGE_SIZE_REGULAR = 1;
+    /** Enlarged folder: spans 2x2 cells and shows a 2x2 grid of slots. */
+    public static final int LARGE_SIZE_ENLARGED = 2;
+    /** XXL folder: spans 3x3 cells and shows a 3x3 grid of slots. */
+    public static final int LARGE_SIZE_XXL = 3;
+    /** Largest supported folder size (cells per side). */
+    public static final int MAX_LARGE_SIZE = LARGE_SIZE_XXL;
+
     public int options;
 
     public FolderNameInfos suggestedFolderNames;
@@ -101,6 +110,59 @@ public class FolderInfo extends CollectionInfo {
             throw new RuntimeException("tried to add an illegal type into a folder");
         }
         getContents().add(item);
+    }
+
+    /**
+     * Returns true if {@code size} is a valid number of cells per side for a folder.
+     */
+    public static boolean isValidLargeSize(int size) {
+        return size >= LARGE_SIZE_REGULAR && size <= MAX_LARGE_SIZE;
+    }
+
+    /**
+     * Returns the number of cells per side this folder occupies on the workspace:
+     * {@link #LARGE_SIZE_REGULAR} for a regular folder, or 2/3 for an enlarged/XXL one.
+     * Only folders placed directly on the workspace can be large.
+     */
+    public int getLargeFolderSize() {
+        if (container == LauncherSettings.Favorites.CONTAINER_DESKTOP
+                && spanX == spanY && spanX > LARGE_SIZE_REGULAR && isValidLargeSize(spanX)) {
+            return spanX;
+        }
+        return LARGE_SIZE_REGULAR;
+    }
+
+    /** Returns true if this folder is shown as an enlarged / XXL folder. */
+    public boolean isLargeFolder() {
+        return getLargeFolderSize() > LARGE_SIZE_REGULAR;
+    }
+
+    /**
+     * Returns the number of slots (icons plus the overflow slot) of a large folder, or 0 for a
+     * regular folder.
+     */
+    public int getLargeSlotCount() {
+        int size = getLargeFolderSize();
+        return size > LARGE_SIZE_REGULAR ? size * size : 0;
+    }
+
+    /**
+     * Returns true if a large folder has more items than slots, in which case the last slot shows
+     * a miniature preview of the remaining items and opens the folder when tapped.
+     */
+    public boolean hasLargeOverflow() {
+        return isLargeFolder() && getContents().size() > getLargeSlotCount();
+    }
+
+    /**
+     * Returns how many items a large folder shows as full icons. If there is an overflow, the
+     * last slot is used by the preview, otherwise every item has its own slot.
+     */
+    public int getLargeVisibleCount() {
+        if (!isLargeFolder()) {
+            return 0;
+        }
+        return hasLargeOverflow() ? getLargeSlotCount() - 1 : getContents().size();
     }
 
     /**

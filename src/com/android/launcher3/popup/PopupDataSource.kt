@@ -27,7 +27,9 @@ import com.android.launcher3.AbstractFloatingViewHelper
 import com.android.launcher3.DropTargetHandler
 import com.android.launcher3.Flags.enableHomeScreenFilesCopyPaste
 import com.android.launcher3.Flags.enableHomeScreenFilesRenaming
+import com.android.launcher3.Launcher
 import com.android.launcher3.LauncherConstants
+import com.android.launcher3.LauncherSettings.Favorites.CONTAINER_DESKTOP
 import com.android.launcher3.LauncherSettings.Favorites.ITEM_TYPE_APPWIDGET
 import com.android.launcher3.LauncherSettings.Favorites.ITEM_TYPE_APP_GROUP
 import com.android.launcher3.LauncherSettings.Favorites.ITEM_TYPE_CUSTOM_APPWIDGET
@@ -39,6 +41,8 @@ import com.android.launcher3.SecondaryDropTarget
 import com.android.launcher3.Utilities
 import com.android.launcher3.accessibility.LauncherAccessibilityDelegate
 import com.android.launcher3.allapps.PrivateProfileManager
+import com.android.launcher3.folder.FolderIcon
+import com.android.launcher3.folder.LargeFolderSizeSheet
 import com.android.launcher3.homescreenfiles.HomeScreenFilesRenameDialogFactory
 import com.android.launcher3.homescreenfiles.HomeScreenFilesUtils
 import com.android.launcher3.homescreenfiles.homeScreenFile
@@ -76,8 +80,27 @@ object PopupDataSource {
 
 object FolderSystemShortcuts : PopupDataMapper {
 
+    // Popup data for resizing a home screen folder (regular / enlarged / XXL).
+    private val resizePopupData =
+        PopupData(
+            iconResId = R.drawable.ic_resize_folder,
+            labelResId = R.string.large_folder_resize_label,
+            category = PopupCategory.SYSTEM_SHORTCUT_FIXED,
+        ) { activityContext: ActivityContext, _: ItemInfo, view: View ->
+            AbstractFloatingView.closeAllOpenViews(activityContext)
+            val launcher = activityContext as? Launcher
+            if (launcher != null && view is FolderIcon) {
+                LargeFolderSizeSheet.show(launcher, view)
+            }
+        }
+
     override fun getPopupDataByItemInfo(itemInfo: ItemInfo): List<PopupData>? =
-        if (itemInfo.itemType == ITEM_TYPE_FOLDER) listOf(PopupDataSource.removePopupData) else null
+        when {
+            itemInfo.itemType != ITEM_TYPE_FOLDER -> null
+            itemInfo.container == CONTAINER_DESKTOP ->
+                listOf(resizePopupData, PopupDataSource.removePopupData)
+            else -> listOf(PopupDataSource.removePopupData)
+        }
 }
 
 object AppPairSystemShortcuts : PopupDataMapper {

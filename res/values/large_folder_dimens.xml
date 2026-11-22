@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="large_folder_plate_inset">2dp</dimen>
+    <dimen name="folder_name_padding_large">4dp</dimen>
+    <dimen name="large_folder_sheet_padding">24dp</dimen>
+    <dimen name="large_folder_preview_height">168dp</dimen>
+    <dimen name="large_folder_tile_size">72dp</dimen>
+</resources>

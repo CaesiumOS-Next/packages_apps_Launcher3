@@ -149,6 +149,14 @@ public class PreviewItemManager {
         return animateDrawable;
     }
 
+    /**
+     * Forces the preview background and layout rule to be set up again on the next call to
+     * {@link #recomputePreviewDrawingParams()}, for example after the preview was re-anchored.
+     */
+    public void invalidateDrawingParams() {
+        mTotalWidth = -1;
+    }
+
     public void recomputePreviewDrawingParams() {
         if (mReferenceDrawable != null) {
             computePreviewDrawingParams(mReferenceDrawable.getIntrinsicWidth(),

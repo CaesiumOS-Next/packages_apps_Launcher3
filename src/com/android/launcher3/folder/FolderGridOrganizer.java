@@ -42,6 +42,12 @@ public class FolderGridOrganizer {
     private int mCountX;
     private int mCountY;
     private boolean mDisplayingUpperLeftQuadrant = false;
+    /**
+     * For a large folder, the number of items shown as full icons. The miniature preview then shows
+     * the items after these (the "overflow"). Negative for regular folders.
+     */
+    private int mLargeVisibleCount = -1;
+    private boolean mLargeHasOverflow = false;
     private static final int PREVIEW_MAX_ROWS = 2;
     private static final int PREVIEW_MAX_COLUMNS = 2;
 
@@ -68,6 +74,13 @@ public class FolderGridOrganizer {
      * Updates the organizer with the provided folder info
      */
     public FolderGridOrganizer setFolderInfo(FolderInfo info) {
+        if (info.isLargeFolder()) {
+            mLargeVisibleCount = info.getLargeVisibleCount();
+            mLargeHasOverflow = info.hasLargeOverflow();
+        } else {
+            mLargeVisibleCount = -1;
+            mLargeHasOverflow = false;
+        }
         return setContentSize(info.getContents().size());
     }
 
@@ -171,6 +184,14 @@ public class FolderGridOrganizer {
      */
     public <T, R extends T> ArrayList<R> previewItemsForPage(int page, List<T> contents) {
         ArrayList<R> result = new ArrayList<>();
+        if (page == 0 && mLargeHasOverflow) {
+            // Large folder: the preview shows the items which don't have a slot of their own.
+            int end = Math.min(mLargeVisibleCount + MAX_NUM_ITEMS_IN_PREVIEW, contents.size());
+            for (int i = mLargeVisibleCount; i < end; i++) {
+                result.add((R) contents.get(i));
+            }
+            return result;
+        }
         int itemsPerPage = mCountX * mCountY;
         int start = itemsPerPage * page;
         int end = Math.min(start + itemsPerPage, contents.size());
@@ -208,6 +229,10 @@ public class FolderGridOrganizer {
      * @return True iff the icon is in the 2x2 upper left quadrant of the Folder.
      */
     public boolean isItemInPreview(int page, int rank) {
+        if (page == 0 && mLargeVisibleCount >= 0) {
+            // Large folder: items shown as icons and the items in the overflow preview.
+            return rank < mLargeVisibleCount + MAX_NUM_ITEMS_IN_PREVIEW;
+        }
         // First page items are laid out such that the first 4 items are always in the upper
         // left quadrant. For all other pages, we need to check the row and col.
         if (page > 0 || mDisplayingUpperLeftQuadrant) {

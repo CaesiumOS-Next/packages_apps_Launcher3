@@ -416,6 +416,25 @@ constructor(
         }
     }
 
+    /**
+     * Returns true if [item], with its current span, lies inside the workspace grid and doesn't
+     * overlap any item that was already placed. Unlike [checkItemPlacement], this doesn't mark
+     * any cells as occupied.
+     */
+    fun canPlaceOnDesktop(item: ItemInfo): Boolean {
+        if (item.container != CONTAINER_DESKTOP) return false
+        if (
+            item.cellX < 0 ||
+                item.cellY < 0 ||
+                item.cellX + item.spanX > idp.numColumns ||
+                item.cellY + item.spanY > idp.numRows
+        ) {
+            return false
+        }
+        val occupancy = occupied[item.screenId] ?: return true
+        return occupancy.isRegionVacant(item.cellX, item.cellY, item.spanX, item.spanY)
+    }
+
     /** check & update map of what's occupied; used to discard overlapping/invalid items */
     fun checkItemPlacement(item: ItemInfo): Boolean {
         val containerIndex = item.screenId

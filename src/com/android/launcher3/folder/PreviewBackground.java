@@ -89,6 +89,13 @@ public class PreviewBackground extends DelegatedCellDrawing {
     int basePreviewOffsetX;
     int basePreviewOffsetY;
 
+    // When set, the preview is centered on this point (in the coordinates of the folder icon)
+    // instead of being centered at the top of the icon. Used by large folders, whose preview only
+    // occupies the last slot.
+    private boolean mHasAnchor = false;
+    private int mAnchorCenterX;
+    private int mAnchorCenterY;
+
     private CellLayout mDrawingDelegate;
 
     // When the PreviewBackground is drawn under an icon (for creating a folder) the border
@@ -178,6 +185,10 @@ public class PreviewBackground extends DelegatedCellDrawing {
 
         basePreviewOffsetX = (availableSpaceX - previewSize) / 2;
         basePreviewOffsetY = topPadding + grid.getFolderProfile().getFolderIconOffsetYPx();
+        if (mHasAnchor) {
+            basePreviewOffsetX = mAnchorCenterX - previewSize / 2;
+            basePreviewOffsetY = mAnchorCenterY - previewSize / 2;
+        }
 
         // Stroke width is 1dp
         mStrokeWidth = context.getResources().getDisplayMetrics().density;
@@ -193,6 +204,21 @@ public class PreviewBackground extends DelegatedCellDrawing {
         }
 
         invalidate();
+    }
+
+    /**
+     * Centers the preview on the given point, in the coordinates of the folder icon. Takes effect
+     * on the next call to {@link #setup}.
+     */
+    void setAnchorCenter(int centerX, int centerY) {
+        mHasAnchor = true;
+        mAnchorCenterX = centerX;
+        mAnchorCenterY = centerY;
+    }
+
+    /** Goes back to centering the preview at the top of the icon. */
+    void clearAnchor() {
+        mHasAnchor = false;
     }
 
     void getBounds(Rect outBounds) {
