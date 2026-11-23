@@ -166,6 +166,9 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
     private int mLargeMeasuredW = -1;
     private int mLargeMeasuredH = -1;
     private int mLargeMeasuredSize = -1;
+    private int mLargeOverflowCenterX;
+    private int mLargeOverflowCenterY;
+    private boolean mLargeAnimationMode = false;
 
     private static final Property<FolderIcon, Float> DOT_SCALE_PROPERTY
             = new Property<FolderIcon, Float>(Float.TYPE, "dotScale") {
@@ -885,6 +888,8 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
         }
         mLargeSlotViews.clear();
         if (!isLargeFolder()) {
+            mLargeAnimationMode = false;
+            mBackground.setSizeOverride(0);
             mBackground.clearAnchor();
             mPreviewItemManager.invalidateDrawingParams();
             return;
@@ -912,7 +917,8 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             slot.applyFromWorkspaceItem((WorkspaceItemInfo) item);
             slot.setContainerTextVisibility(false);
-            slot.setCenterVertically(true);
+            // The icon is placed explicitly in measureLarge(), the label space is not needed.
+            slot.setCenterVertically(false);
             slot.setOnClickListener(mActivity.getItemOnClickListener());
             // Long press acts on the whole folder, which keeps the popup and the drag consistent.
             slot.setOnLongClickListener(v -> performLongClick());
@@ -978,16 +984,47 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
             getLargeSlotCenter(i, n, w, gridH, center);
             FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) slot.getLayoutParams();
             lp.width = slotW;
-            lp.height = slotH;
+            lp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
             lp.gravity = Gravity.TOP | Gravity.START;
             lp.leftMargin = center[0] - slotW / 2;
-            lp.topMargin = center[1] - slotH / 2;
+            // The icon is drawn at the top of the view, below its padding, so this puts the icon
+            // exactly at the center of the slot, which is also where the overflow preview is.
+            lp.topMargin = center[1] - slot.getIconSize() / 2 - slot.getPaddingTop();
         }
 
         // The overflow preview lives in the last slot.
         getLargeSlotCenter(n * n - 1, n, w, gridH, center);
-        mBackground.setAnchorCenter(center[0], center[1]);
+        mLargeOverflowCenterX = center[0];
+        mLargeOverflowCenterY = center[1];
+        applyLargeAnchor();
+    }
+
+    private void applyLargeAnchor() {
+        if (mLargeAnimationMode && !mLargePlate.isEmpty()) {
+            mBackground.setAnchorCenter(mLargePlate.centerX(), mLargePlate.centerY());
+            mBackground.setSizeOverride(Math.min(mLargePlate.width(), mLargePlate.height()));
+        } else {
+            mBackground.setSizeOverride(0);
+            mBackground.setAnchorCenter(mLargeOverflowCenterX, mLargeOverflowCenterY);
+        }
         mPreviewItemManager.invalidateDrawingParams();
+    }
+
+    /**
+     * While a large folder opens or closes, the animation grows out of (and shrinks back into)
+     * the whole plate rather than the small preview in the last slot.
+     */
+    public void setLargeAnimationMode(boolean enabled) {
+        enabled &= isLargeFolder() && !mLargePlate.isEmpty();
+        if (enabled == mLargeAnimationMode) {
+            return;
+        }
+        mLargeAnimationMode = enabled;
+        if (isLargeFolder()) {
+            applyLargeAnchor();
+            mPreviewItemManager.setUpWithoutItems(
+                    mActivity.getDeviceProfile().getWorkspaceProfile().getIconSizePx());
+        }
     }
 
     /** Restores the regular single-cell layout after being a large folder. */

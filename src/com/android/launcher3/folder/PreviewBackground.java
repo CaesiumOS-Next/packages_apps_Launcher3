@@ -95,6 +95,9 @@ public class PreviewBackground extends DelegatedCellDrawing {
     private boolean mHasAnchor = false;
     private int mAnchorCenterX;
     private int mAnchorCenterY;
+    // When positive, replaces the default preview size. Used while a large folder opens or closes
+    // so that the animation starts from the whole plate instead of the small overflow preview.
+    private int mSizeOverride = 0;
 
     private CellLayout mDrawingDelegate;
 
@@ -181,7 +184,8 @@ public class PreviewBackground extends DelegatedCellDrawing {
         ta.recycle();
 
         DeviceProfile grid = activity.getDeviceProfile();
-        previewSize = grid.getFolderProfile().getFolderIconSizePx();
+        previewSize = mSizeOverride > 0
+                ? mSizeOverride : grid.getFolderProfile().getFolderIconSizePx();
 
         basePreviewOffsetX = (availableSpaceX - previewSize) / 2;
         basePreviewOffsetY = topPadding + grid.getFolderProfile().getFolderIconOffsetYPx();
@@ -214,6 +218,11 @@ public class PreviewBackground extends DelegatedCellDrawing {
         mHasAnchor = true;
         mAnchorCenterX = centerX;
         mAnchorCenterY = centerY;
+    }
+
+    /** Overrides the preview size in pixels, or restores the default when {@code size <= 0}. */
+    void setSizeOverride(int size) {
+        mSizeOverride = size;
     }
 
     /** Goes back to centering the preview at the top of the icon. */

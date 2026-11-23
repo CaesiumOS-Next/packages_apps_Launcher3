@@ -274,6 +274,20 @@ public class DrawerFolderController implements DropTarget, DragController.DragLi
 
     private void handOverToWorkspace(DragObject d) {
         mDragInDrawer = false;
+        if (d.dragSource instanceof Folder && d.dragInfo instanceof WorkspaceItemInfo) {
+            // Apps dragged from a drawer folder to the home screen are copied there: the app has
+            // to stay in its folder, like an app dragged out of the drawer list stays in the list.
+            Folder folder = (Folder) d.dragSource;
+            WorkspaceItemInfo original = (WorkspaceItemInfo) d.dragInfo;
+            WorkspaceItemInfo copy = new WorkspaceItemInfo(original);
+            copy.id = ItemInfo.NO_ID;
+            copy.container = ItemInfo.NO_ID;
+            copy.rank = 0;
+            copy.cellX = -1;
+            copy.cellY = -1;
+            d.dragInfo = copy;
+            folder.restoreDraggedItem(original);
+        }
         mLauncher.getWorkspace().onDrawerDragHandedOver(d, mDragOptions);
     }
 
@@ -349,6 +363,8 @@ public class DrawerFolderController implements DropTarget, DragController.DragLi
             if (hoverFolder != null) {
                 hoverFolder.onDrop(d, false);
             } else if (d.dragInfo instanceof ItemInfo) {
+                // No drop animation runs here, so the drag view has to be removed right away.
+                d.deferDragViewCleanupPostAnimation = false;
                 // Folder#onDragStart already took the item out of the folder contents.
                 mLauncher.getModelWriter().deleteItemFromDatabase(
                         (ItemInfo) d.dragInfo, "drawer folder item dropped in drawer");
@@ -357,6 +373,8 @@ public class DrawerFolderController implements DropTarget, DragController.DragLi
             if (hoverFolder != null) {
                 hoverFolder.onDrop(d, false);
             } else if (hoverApp != null) {
+                // No drop animation runs here, so the drag view has to be removed right away.
+                d.deferDragViewCleanupPostAnimation = false;
                 createFolder(hoverApp, (AppInfo) d.dragInfo);
             }
         }

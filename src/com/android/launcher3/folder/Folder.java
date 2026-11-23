@@ -252,6 +252,8 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
 
     private boolean mSuppressFolderDeletion = false;
     private boolean mSuppressContentUpdate = false;
+    // True when the item being dragged out was put back because the drag continues as a copy.
+    private boolean mDragItemRestored = false;
 
     private boolean mItemAddedBackToSelfViaIcon = false;
     private boolean mIsEditingName = false;
@@ -798,6 +800,7 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
         Log.d("b/383526431", "animateOpen: content child count after cancelling"
                 + " animation: " + mContent.getTotalChildCount());
 
+        mFolderIcon.setLargeAnimationMode(true);
         AnimatorSet animatorSet = getFolderAnimationManager()
                 .createAnimatorSet(/* isOpening */ true);
 
@@ -974,6 +977,7 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
         mContent.snapToPageImmediately(mContent.getDestinationPage());
 
         cancelRunningAnimations();
+        mFolderIcon.setLargeAnimationMode(true);
         AnimatorSet animatorSet = getFolderAnimationManager()
                 .createAnimatorSet(/* isOpening */ false);
 
@@ -1029,6 +1033,7 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
         clearFocus();
         if (mFolderIcon != null) {
             mFolderIcon.setVisibility(View.VISIBLE);
+            mFolderIcon.setLargeAnimationMode(false);
             mFolderIcon.setIconVisible(true);
             mFolderIcon.mFolderName.getFloatingViewTextAlpha().setValue(
                     1f);
@@ -1224,7 +1229,7 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
                     && target != this) {
                 replaceFolderWithFinalItem();
             }
-        } else {
+        } else if (!mDragItemRestored) {
             // The drag failed, we need to return the item to the folder
             ItemInfo info = d.dragInfo;
             View icon = (mCurrentDragView != null && mCurrentDragView.getTag() == info)
@@ -1255,6 +1260,7 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
         mDeleteFolderOnDropCompleted = false;
         mIsDragInProgress = false;
         mItemAddedBackToSelfViaIcon = false;
+        mDragItemRestored = false;
         mCurrentDragView = null;
 
         // Reordering may have occured, and we need to save the new item locations. We do this once
@@ -1598,6 +1604,16 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
         if (v != null) {
             v.setVisibility(VISIBLE);
         }
+    }
+
+    /**
+     * Puts the item that is being dragged out back into the folder. Used by drawer folders: an app
+     * dragged to the home screen leaves a copy there, the app itself stays in the folder.
+     */
+    public void restoreDraggedItem(ItemInfo item) {
+        mDragItemRestored = true;
+        mDeleteFolderOnDropCompleted = false;
+        addFolderContent(item, item.rank, false);
     }
 
     /** Add an app or shortcut */

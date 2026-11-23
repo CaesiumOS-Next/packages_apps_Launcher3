@@ -67,6 +67,7 @@ import com.android.launcher3.testing.TestLogging;
 import com.android.launcher3.testing.shared.TestProtocol;
 import com.android.launcher3.util.ApiWrapper;
 import com.android.launcher3.util.ItemInfoMatcher;
+import com.android.launcher3.views.ActivityContext;
 import com.android.launcher3.views.FloatingIconView;
 import com.android.launcher3.widget.LauncherAppWidgetProviderInfo;
 import com.android.launcher3.widget.PendingAppWidgetHostView;
@@ -137,6 +138,13 @@ public class ItemClickHandler {
      */
     private static void onClickFolderIcon(View v) {
         Folder folder = ((FolderIcon) v).getFolder();
+        // With several fingers down, more than one folder icon can be clicked at once. Only one
+        // folder may be open (or opening) at a time, so ignore the other clicks.
+        ActivityContext activityContext = ActivityContext.lookupContext(v.getContext());
+        Folder openFolder = Folder.getOpen(activityContext);
+        if (openFolder != null && openFolder != folder) {
+            return;
+        }
         if (!folder.isOpen() && !folder.isDestroyed()) {
             // Open the requested folder
             folder.animateOpen();

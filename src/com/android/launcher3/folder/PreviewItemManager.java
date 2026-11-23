@@ -157,6 +157,14 @@ public class PreviewItemManager {
         mTotalWidth = -1;
     }
 
+    /**
+     * Sets up the preview background and layout rule for a folder that has no items in its
+     * preview (a large folder without overflow), which would otherwise never be set up.
+     */
+    void setUpWithoutItems(int drawableSize) {
+        computePreviewDrawingParams(drawableSize, mIcon.getMeasuredWidth());
+    }
+
     public void recomputePreviewDrawingParams() {
         if (mReferenceDrawable != null) {
             computePreviewDrawingParams(mReferenceDrawable.getIntrinsicWidth(),
