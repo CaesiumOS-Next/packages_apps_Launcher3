@@ -68,6 +68,7 @@ import com.android.launcher3.allapps.ActivityAllAppsContainerView;
 import com.android.launcher3.anim.AnimatedFloat;
 import com.android.launcher3.celllayout.CellLayoutLayoutParams;
 import com.android.launcher3.dot.FolderDotInfo;
+import com.android.launcher3.deviceprofile.AllAppsProfile;
 import com.android.launcher3.dragndrop.BaseItemDragListener;
 import com.android.launcher3.dragndrop.DragLayer;
 import com.android.launcher3.dragndrop.DragView;
@@ -715,6 +716,11 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
         if (mLargeLaidOut) {
             leaveLargeLayout();
         }
+        if (mInfo != null && mInfo.container == LauncherSettings.Favorites.CONTAINER_ALL_APPS) {
+            measureDrawerFolder(MeasureSpec.getSize(heightMeasureSpec));
+            super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+            return;
+        }
         boolean shouldCenterIcon = mActivity.getDeviceProfile().getWorkspaceProfile()
                 .getIconCenterVertically();
         if (shouldCenterIcon) {
@@ -726,6 +732,33 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
                     - cellHeightPx) / 2, getPaddingRight(), getPaddingBottom());
         }
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+    }
+
+    /**
+     * Folders in the app drawer sit in cells that are laid out like the drawer's app icons: the
+     * icon and label are centered vertically using the all apps icon size, drawable padding and
+     * text lines, not the workspace ones. This puts the folder circle and its label exactly where
+     * the icon and label of a regular drawer app are.
+     */
+    private void measureDrawerFolder(int height) {
+        DeviceProfile grid = mActivity.getDeviceProfile();
+        AllAppsProfile allApps = grid.getAllAppsProfile();
+        int lines = Flags.enableScalabilityForDesktopExperience()
+                ? Math.max(1, allApps.getMaxAllAppsTextLineCount()) : 1;
+        Paint.FontMetrics fm = mFolderName.getPaint().getFontMetrics();
+        int labelOffset = allApps.getIconSizePx() + allApps.getIconDrawablePaddingPx();
+        int cellContentHeight = labelOffset + (int) Math.ceil(fm.bottom - fm.top) * lines;
+        int appIconTop = (height - cellContentHeight) / 2;
+        // The folder circle is centered on where the icon of an app would be.
+        int top = appIconTop
+                + (allApps.getIconSizePx() - grid.getFolderProfile().getFolderIconSizePx()) / 2
+                - grid.getFolderProfile().getFolderIconOffsetYPx();
+        if (getPaddingTop() != top) {
+            setPadding(getPaddingLeft(), top, getPaddingRight(), getPaddingBottom());
+        }
+        // The label starts below the icon, measured from the (padded) top of this view.
+        FrameLayout.LayoutParams nameLp = (FrameLayout.LayoutParams) mFolderName.getLayoutParams();
+        nameLp.topMargin = appIconTop + labelOffset - top;
     }
 
     /** Sets the visibility of the icon's title text */

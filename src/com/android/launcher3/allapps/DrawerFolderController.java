@@ -302,8 +302,22 @@ public class DrawerFolderController implements DropTarget, DragController.DragLi
 
     @Override
     public void getHitRectRelativeToDragLayer(Rect outRect) {
-        mLauncher.getDragLayer().getDescendantRectRelativeToSelf(mLauncher.getAppsView(), outRect);
-        outRect.top = Math.max(outRect.top, getHomeZoneBottom());
+        // The whole display: the home zone is detected in onDragEnter()/onDragOver(). Limiting the
+        // rect to the part below the zone missed drags that start inside an open drawer folder
+        // and move straight up into the zone, because they never entered this target.
+        outRect.set(0, 0, mLauncher.getDragLayer().getWidth(),
+                mLauncher.getDragLayer().getHeight());
+    }
+
+    /** Hands the drag to the workspace if it is inside the home zone. */
+    private boolean handOverIfInHomeZone(DragObject d) {
+        if (!mDragInDrawer
+                || mLauncher.getDragController().getLastTouch().y >= getHomeZoneBottom()) {
+            return false;
+        }
+        clearHover();
+        handOverToWorkspace(d);
+        return true;
     }
 
     /** Raw DragLayer coordinates are wanted, so there is no drop view. */
@@ -314,12 +328,16 @@ public class DrawerFolderController implements DropTarget, DragController.DragLi
 
     @Override
     public void onDragEnter(DragObject d) {
-        updateHover(d);
+        if (!handOverIfInHomeZone(d)) {
+            updateHover(d);
+        }
     }
 
     @Override
     public void onDragOver(DragObject d) {
-        updateHover(d);
+        if (!handOverIfInHomeZone(d)) {
+            updateHover(d);
+        }
     }
 
     @Override
